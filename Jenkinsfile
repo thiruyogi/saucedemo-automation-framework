@@ -4,6 +4,7 @@ pipeline {
     options {
         timestamps()
         disableConcurrentBuilds()
+        skipDefaultCheckout(true)
     }
 
     parameters {
@@ -12,7 +13,6 @@ pipeline {
 
     environment {
         CI = 'true'
-        PATH = '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
     }
 
     stages {
@@ -24,14 +24,17 @@ pipeline {
 
         stage('Build & Test') {
             steps {
-                sh '''
-                    echo "PATH=$PATH"
-                    which java
+                bat '''
+                    @echo on
+                    echo PATH=%PATH%
+                    where java
                     java -version
-                    which mvn
-                    mvn -version
-                    echo "Running tests on browser: ${BROWSER}"
-                    mvn clean test -Dbrowser=${BROWSER} -Dheadless=true
+                    where mvn
+                    call mvn -version
+                    if errorlevel 1 exit /b 1
+                    echo Running tests on browser: %BROWSER%
+                    call mvn clean test -Dbrowser=%BROWSER% -Dheadless=true
+                    if errorlevel 1 exit /b 1
                 '''
             }
         }
@@ -40,14 +43,14 @@ pipeline {
     post {
         always {
             archiveArtifacts artifacts: 'reports/**, target/**, test-output/**, screenshots/**', allowEmptyArchive: true
-            publishHTML(target: [
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'reports',
-                reportFiles: 'extent-report.html',
-                reportName: 'Extent HTML Report'
-            ])
+            // publishHTML(target: [
+            //     allowMissing: true,
+            //     alwaysLinkToLastBuild: true,
+            //     keepAll: true,
+            //     reportDir: 'reports',
+            //     reportFiles: 'extent-report.html',
+            //     reportName: 'Extent HTML Report'
+            // ])
         }
     }
 }
